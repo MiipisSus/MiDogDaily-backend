@@ -1,51 +1,48 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, DateTime, Enum, \
-    Boolean
-from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlmodel import SQLModel, Field, Relationship
+from typing import TYPE_CHECKING, Optional
+from enum import Enum
+from datetime import datetime
 
-from enum import IntEnum
+if TYPE_CHECKING:
+    from .user import User
+    from .tag import Tag
 
-from .database import Base
-
-
-class Difficulty(IntEnum):
-    EASY = 1
-    MEDIUM = 2
-    HARD = 3
+class Difficulty(Enum):
+    EASY = 'EASY'
+    MEDIUM = 'MEDIUM'
+    HARD = 'HARD'
     
 
-class Priority(IntEnum):
-    LOW = 1
-    MEDIUM = 2
-    HIGH = 3
+class Priority(Enum):
+    LOW = 'LOW'
+    MEDIUM = 'MEDIUM'
+    HIGH = 'HIGH'
     
+    
+class TaskTagLink(SQLModel, table=True):
+    __tablename__ = 'task_tag_link'
+    
+    task_id: int = Field(foreign_key='tasks.id', primary_key=True, ondelete='CASCADE')
+    tag_id: int = Field(foreign_key='tags.id', primary_key=True, ondelete='CASCADE')
 
-class Task(Base):
+
+class TaskBase(SQLModel):
+    title: str = Field(nullable=False)
+    content: str = Field(nullable=False)
+    difficulty: Difficulty = Field(default=Difficulty.MEDIUM, nullable=False)
+    priority: Priority =  Field(default=Priority.MEDIUM, nullable=False)
+    deadline: Optional[datetime] = Field(nullable=True, default=None)
+
+
+class Task(TaskBase, table=True):
     __tablename__ = 'tasks'
     
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
-    tag_id = Column(Integer, ForeignKey('tags.id'), nullable=True)
+    id: int = Field(primary_key=True, index=True)
+    user_id: int = Field(foreign_key='users.id', ondelete='CASCADE')
     
-    user = relationship('User', back_populates='tasks')
-    title = Column(String, nullable=False)
-    content = Column(String, nullable=False)
-    difficulty = Column(Enum(Difficulty), default=Difficulty.MEDIUM, nullable=False)
-    tag = relationship('Tag', back_populates='tasks')
-    priority = Column(Enum(Priority), default=Priority.MEDIUM, nullable=False)
-    deadline = Column(DateTime, nullable=True)
+    create_at: datetime = Field(default_factory=datetime.now, nullable=False)
     
-    create_at = Column(DateTime, default=func.now(), nullable=False)
-    
+    user: 'User' = Relationship(back_populates='tasks')
+    tags: list['Tag'] = Relationship(back_populates='tasks', link_model=TaskTagLink)
 
-class Tag(Base):
-    __tablename__ = 'tags'
-    
-    id = Column(Integer, primary_key=True, index=True)
-    owner_id = Column(Integer, ForeignKey('users.id'), nullable=True)
-    
-    name = Column(String, unique=True, nullable=False)
-    is_public = Column(Boolean, default=True, nullable=False)
-    owner = relationship('User', back_populates='tags')
-    
-    tasks = relationship('Task', back_populates='tag')
+

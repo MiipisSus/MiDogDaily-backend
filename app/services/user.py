@@ -1,37 +1,46 @@
 from sqlalchemy.orm import Session
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
 from app.core.models import User
-from app.core.schemas import UserCreate
+from app.core.schemas import UserCreate, AdminUserCreate
+
+from .utils import update_instance, validate_user_access
 
 
 class UserService:
     @staticmethod
-    def validate_user(db: Session, user: UserCreate):
+    def validate_unique_fields(db: Session, user: UserCreate):
         if db.query(User).filter(User.username == user.username).first():
-            raise HTTPException(status_code=400, detail="該帳號名稱已存在")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="該帳號名稱已存在")
         if db.query(User).filter(User.email == user.email).first():
-            raise HTTPException(status_code=400, detail="該電子郵件地址已存在")
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="該電子郵件地址已存在")
     
     @staticmethod
-    def get_single_user(db: Session, id: int):
+    def is_user_exist(db: Session, id: int):
         user = db.query(User).filter(User.id == id).first()
         if not user:
-            raise HTTPException(status_code=400, detail='User not found')
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'User with id {id} does not exist')
         
         return user
     
     @staticmethod
-    def get_users(db: Session) -> Page[User]:
-        return paginate(db.query(User))
+    def list_users(db: Session, user: User) -> Page[User]:
+        return paginate(db.query(User).filter(User.id != user.id))
     
     @staticmethod
-    def create_user(db: Session, user: UserCreate) -> User:
-        UserService.validate_user(db, user)
+    def get_user(db: Session, user: User, id: int) -> User:
+        UserService.is_user_exist(db, id)
+        validate_user_access(user, id)
+        
+        return user
+        
+    @staticmethod
+    def create_user(db: Session, data: UserCreate) -> User:
+        UserService.validate_unique_fields(db, data)
         
         new_user = User(
-            **user.dict()
+            **data.model_dump()
         )
         new_user.encode_password()
         
@@ -43,11 +52,12 @@ class UserService:
         return new_user
     
     @staticmethod
-    def update_user(db: Session, id: int, data: UserCreate) -> User:
-        user = UserService.get_single_user(db, id)
+    def update_user(db: Session, user: User, id: int, data: UserCreate) -> User:
+        UserService.is_user_exist(db, id)
+        UserService.validate_unique_fields(db, data)
+        validate_user_access(user, id)
         
-        for field, value in data.dict().items():
-            setattr(user, field, value)
+        update_instance(user, data)
             
         db.commit()
         db.refresh(user)
@@ -55,7 +65,47 @@ class UserService:
         return user
         
     @staticmethod
-    def delete_user(db: Session, id: int):
-        user = UserService.get_single_user(db, id)
+    def delete_user(db: Session, user: User, id: int):
+        UserService.is_user_exist(db, id)
+        validate_user_access(user, id)
         
         db.delete(user)
+        db.commit()
+        
+        return
+    
+    @staticmethod
+    def create_admin(db: Session, data: AdminUserCreate) -> User:
+        UserService.validate_unique_fields(db, data)
+        
+        new_user = User(
+            **data.model_dump()
+        )
+        new_user.encode_password()
+        
+        db.add(new_user)
+        db.commit()
+        db.refresh(new_user)
+        
+        return new_user
+    
+    @staticmethod
+    def update_admin(db: Session, id: int, data: AdminUserCreate) -> User:
+        user = UserService.is_user_exist(db, id)
+        UserService.validate_unique_fields(db, data)
+        
+        update_instance(user, data)
+        
+        db.commit()
+        db.refresh(user)
+        
+        return user
+    
+    @staticmethod
+    def delete_admin(db: Session, id: int):
+        user = UserService.is_user_exist(db, id)
+        
+        db.delete(user)
+        db.commit()
+        
+        return

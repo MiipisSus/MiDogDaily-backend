@@ -1,24 +1,25 @@
-from sqlalchemy.orm import Session
-from fastapi import HTTPException
-from pydantic import BaseModel, EmailStr
+from typing import Optional
 
-from app.core.models import User
+from app.core.models import UserBase, Role, UserRole
+from .tasks import TaskResponse
+from .tag import TagResponse
 
-
-class UserBase(BaseModel):
-    username: str
-    email: EmailStr
-    nickname: str
-    coin: float
-
-
+    
 class UserCreate(UserBase):
     password: str
     
 
+class AdminUserCreate(UserBase):
+    password: str
+    role_id: Role
+    
 class UserResponse(UserBase):
     id: int
-
+    role: 'UserRole'
+    coin: float
+    tasks: list['TaskResponse']
+    tags: list['TagResponse']
+    
     class Config:
-        orm_mode = True
+        from_attributes = True
 

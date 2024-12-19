@@ -2,10 +2,10 @@ from typing import Annotated
 from sqlalchemy.orm import Session
 from fastapi import Depends
 
-from .database import Base, engine, SessionLocal
+from .database import SessionLocal
 from .task import *
 from .user import *
-
+from .tag import *
 
 def get_db():
     db = SessionLocal()
@@ -13,5 +13,3 @@ def get_db():
         yield db
     finally:
         db.close()
-        
-db_dependency = Annotated[Session, Depends(get_db)]
