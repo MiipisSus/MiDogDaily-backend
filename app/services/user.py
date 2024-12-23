@@ -10,12 +10,20 @@ from .utils import update_instance, validate_user_access
 
 class UserService:
     @staticmethod
-    def validate_unique_fields(db: Session, user: UserCreate):
-        if db.query(User).filter(User.username == user.username).first():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="該帳號名稱已存在")
-        if db.query(User).filter(User.email == user.email).first():
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="該電子郵件地址已存在")
+    def validate_unique_fields(db: Session, data: UserCreate):
+        UserService.validate_username_field(db, data)
+        UserService.validate_email_field(db, data)
     
+    @staticmethod
+    def validate_username_field(db: Session, data: UserCreate):
+        if db.query(User).filter(User.username == data.username).first():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="該帳號名稱已存在")
+        
+    @staticmethod
+    def validate_email_field(db: Session, data: UserCreate):
+        if db.query(User).filter(User.email == data.email).first():
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="該電子郵件地址已存在")
+        
     @staticmethod
     def is_user_exist(db: Session, id: int):
         user = db.query(User).filter(User.id == id).first()
@@ -40,7 +48,8 @@ class UserService:
         UserService.validate_unique_fields(db, data)
         
         new_user = User(
-            **data.model_dump()
+            **data.model_dump(),
+            role_id=3
         )
         new_user.encode_password()
         
@@ -54,7 +63,11 @@ class UserService:
     @staticmethod
     def update_user(db: Session, user: User, id: int, data: UserCreate) -> User:
         UserService.is_user_exist(db, id)
-        UserService.validate_unique_fields(db, data)
+        if user.username != data.username:
+            UserService.validate_username_field(db, data)
+        if user.email != data.email:
+            UserService.validate_email_field(db, data)
+        
         validate_user_access(user, id)
         
         update_instance(user, data)
@@ -92,7 +105,10 @@ class UserService:
     @staticmethod
     def update_admin(db: Session, id: int, data: AdminUserCreate) -> User:
         user = UserService.is_user_exist(db, id)
-        UserService.validate_unique_fields(db, data)
+        if user.username != data.username:
+            UserService.validate_username_field(db, data)
+        if user.email != data.email:
+            UserService.validate_email_field(db, data)
         
         update_instance(user, data)
         

@@ -1,7 +1,7 @@
 
 from typing import List, Union
 
-from pydantic import AnyHttpUrl, model_validator
+from pydantic import AnyHttpUrl, model_validator, ConfigDict
 from pydantic_settings import BaseSettings
 
 
@@ -25,22 +25,14 @@ class Settings(BaseSettings):
             raise ValueError(f"Invalid CORS origins format: {cors_origins}")
         return values
     
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
-        extra = "allow"
-        
+    model_config = ConfigDict(
+        case_sensitive=True,
+        env_file=".env",
+        extra="allow"
+    )
 
-class TestSettings(Settings):
-    DATABASE_URL: str
-    
-    class Config:
-        env_file = ".env.test"
 
 def get_settings():
-    import os
-    if os.getenv("TESTING"):
-        return TestSettings()
     return Settings()
 
 settings = get_settings()

@@ -21,10 +21,10 @@ def list_tags(db: SessionDEP, user: UserDEP):
 def create_tag(db: SessionDEP, user: UserDEP, data: TagCreate):
     return TagService.create_tag(db, user, data)
 
-@router.put('/{id}', response_model=TagResponse)
+@router.put('/{id}/', response_model=TagResponse)
 def update_tag(db: SessionDEP, user: UserDEP, id: int, data: TagCreate):
     return TagService.update_tag(db, user, id, data)
 
-@router.delete('/{id}')
+@router.delete('/{id}/')
 def delete_tag(db: SessionDEP, user: UserDEP, id: int):
     return TagService.delete_tag(db, user, id)

@@ -6,7 +6,9 @@ from app.core.config import settings
 from .v1.api import router as v1_router
 
 def get_application():
-    _app = FastAPI(title=settings.PROJECT_NAME)
+    _app = FastAPI(
+        title=settings.PROJECT_NAME,
+        root_path='/api')
     
     _app.add_middleware(
         CORSMiddleware,
@@ -21,7 +23,7 @@ def get_application():
 
 app = get_application()
 
-app.include_router(v1_router, prefix='/api')
+app.include_router(v1_router)
 
 # Pagination
 add_pagination(app)

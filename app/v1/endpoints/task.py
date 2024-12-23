@@ -24,11 +24,11 @@ def list_tasks(
 def create_task(db: SessionDEP, user: UserDEP, data: TaskCreate):
     return TaskService.create_task(db, user, data)
 
-@router.put('/{id}', response_model=TaskResponse)
+@router.put('/{id}/', response_model=TaskResponse)
 def update_task(db: SessionDEP, user: UserDEP, id: int, data: TaskCreate):
     return TaskService.update_task(db, user, id, data)
 
-@router.delete('/{id}', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete('/{id}/', status_code=status.HTTP_204_NO_CONTENT)
 def delete_task(db: SessionDEP, user: UserDEP, id: int):
     return TaskService.delete_task(db, user, id)
 
