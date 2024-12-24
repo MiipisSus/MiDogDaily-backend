@@ -10,22 +10,32 @@ from .utils import update_instance, validate_user_access
 
 
 class TaskService:
-    @staticmethod
-    def is_task_exist(db: Session, id: int):
+    """處理任務相關的業務邏輯"""
+    
+    class Exceptions:
+        @staticmethod
+        def task_not_found(id: int) -> HTTPException:
+            return HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'Task with id {id} does not exist'
+            )
+        
+    @classmethod
+    def _get_task_by_id(cls, db: Session, id: int):
         task = db.query(Task).filter(Task.id == id).first()
         if not task:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'Task with id {id} does not exist')
+            raise cls.Exceptions.task_not_found(id)
         
         return task
     
-    @staticmethod
-    def list_tasks(db: Session, user: User, user_id: int) -> Page[Task]:
+    @classmethod
+    def list_tasks(cls, db: Session, user: User, user_id: int) -> Page[Task]:
         validate_user_access(user, user_id)
         
         return paginate(db.query(Task).filter(Task.user_id==user_id))
     
-    @staticmethod
-    def create_task(db: Session, user: User, data: TaskCreate):
+    @classmethod
+    def create_task(cls, db: Session, user: User, data: TaskCreate):
         data = data.model_dump()
         tag_ids = data.pop('tag_ids')
         
@@ -40,7 +50,7 @@ class TaskService:
         
         for tag_id in tag_ids:
             # 檢查該 tag 是否存在
-            tag = TagService.is_tag_exist(db, tag_id)
+            tag = TagService._get_tag_by_id(db, tag_id)
             # 檢查該 tag 是否屬於該用戶，或者為公開
             if not (tag.is_public or tag.owner_id == user.id):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
@@ -52,9 +62,9 @@ class TaskService:
         
         return new_task
     
-    @staticmethod
-    def update_task(db: Session, user: User, id: int, data: TaskCreate):
-        task = TaskService.is_task_exist(db, id)
+    @classmethod
+    def update_task(cls, db: Session, user: User, id: int, data: TaskCreate):
+        task = cls._get_task_by_id(db, id)
         validate_user_access(user, task.user_id)
         
         tag_ids = set(data.model_dump().pop('tag_ids'))
@@ -72,7 +82,7 @@ class TaskService:
         
         for tag_id in tags_to_add:
             # 檢查該 tag 是否存在
-            tag = TagService.is_tag_exist(db, tag_id)
+            tag = TagService._get_tag_by_id(db, tag_id)
             # 檢查該 tag 是否屬於該用戶，或者為公開
             if not (tag.is_public or tag.owner_id == user.id):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
@@ -87,9 +97,9 @@ class TaskService:
         
         return task
     
-    @staticmethod
-    def delete_task(db: Session, user: User, id: int):
-        task = TaskService.is_task_exist(db, id)
+    @classmethod
+    def delete_task(cls, db: Session, user: User, id: int):
+        task = cls._get_task_by_id(db, id)
         validate_user_access(user, task.user_id)
         
         db.delete(task)

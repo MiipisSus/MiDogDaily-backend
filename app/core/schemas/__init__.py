@@ -1,3 +1,3 @@
 from .user import *
-from .tasks import *
+from .task import *
 from .tag import *

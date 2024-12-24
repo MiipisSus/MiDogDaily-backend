@@ -1,7 +1,7 @@
 from typing import Optional
 
 from app.core.models import UserBase, Role, UserRole
-from .tasks import TaskResponse
+from .task import TaskResponse
 from .tag import TagResponse
 
     

@@ -19,7 +19,7 @@ def login(client: TestClient, username, password):
 
 @fixture(scope='function')
 def token_header(client: TestClient):
-    def _create_header(role: str):
+    def _create_header(role: str = 'admin'):
         token = login(client, role, '12345')
         return {
             'Authorization': f'Bearer {token}'

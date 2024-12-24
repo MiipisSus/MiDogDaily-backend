@@ -70,19 +70,3 @@ def list_users(
     )
 def create_admin(db: SessionDEP, user: AdminDEP, data: AdminUserCreate):
     return UserService.create_admin(db, data)
-
-@router.put(
-    '/admin/{id:int}/',
-    response_model=UserResponse,
-    summary='（需要管理者權限）修改一般使用者、超級使用者或管理員',
-)
-def update_admin(db: SessionDEP, user: AdminDEP, id: int, data: AdminUserCreate):
-    return UserService.update_admin(db, id, data)
-
-@router.delete(
-    '/admin/{id:int}/',
-    status_code=status.HTTP_400_BAD_REQUEST,
-    summary='（需要管理者權限）刪除一般使用者、超級使用者或管理員'
-)
-def delete_admin(db: SessionDEP, user: AdminDEP, id: int):
-    return UserService.delete_admin(db, id)

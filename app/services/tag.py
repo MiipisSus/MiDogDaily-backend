@@ -9,24 +9,34 @@ from .utils import update_instance, validate_user_access
 
 
 class TagService:
-    @staticmethod
-    def is_tag_exist(db: Session, id: int) -> Tag:
+    """處理標籤的業務邏輯"""
+    
+    class Exceptions:
+        @staticmethod
+        def tag_not_found(id: int) -> HTTPException:
+            return HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f'Tag with id {id} does not exist'
+            )
+        
+    @classmethod
+    def _get_tag_by_id(cls, db: Session, id: int) -> Tag:
         tag = db.query(Tag).filter(Tag.id == id).first()
         if not tag:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f'Tag with id {id} does not exist')
-
+            raise cls.Exceptions.tag_not_found(id)
+            
         return tag
     
-    @staticmethod
-    def list_tags(db: Session, user: User) -> Page[Tag]:
+    @classmethod
+    def list_tags(cls, db: Session, user: User) -> Page[Tag]:
         public_tags = db.query(Tag).filter(Tag.is_public == True)
         user_tags = db.query(Tag).join(User.tags).filter(User.id == user.id)
         tags = public_tags.union(user_tags).order_by(Tag.id)
         
         return paginate(tags)
     
-    @staticmethod
-    def create_tag(db: Session, user: User, data: TagCreate):
+    @classmethod
+    def create_tag(cls, db: Session, user: User, data: TagCreate):
         new_tag = Tag(
             **data.model_dump(),
             owner_id=user.id
@@ -41,9 +51,9 @@ class TagService:
         
         return new_tag
     
-    @staticmethod
-    def update_tag(db: Session, user: User, id: int, data: TagCreate):
-        tag = TagService.is_tag_exist(db, id)
+    @classmethod
+    def update_tag(cls, db: Session, user: User, id: int, data: TagCreate):
+        tag = cls._get_tag_by_id(db, id)
         validate_user_access(user, tag.owner_id)
         
         update_instance(tag, data)
@@ -53,9 +63,9 @@ class TagService:
         
         return tag
     
-    @staticmethod
-    def delete_tag(db: Session, user: User, id: int):
-        tag = TagService.is_tag_exist(db, id)
+    @classmethod
+    def delete_tag(cls, db: Session, user: User, id: int):
+        tag = cls._get_tag_by_id(db, id)
         validate_user_access(user, tag.owner_id)
         
         db.delete(tag)
