@@ -29,10 +29,15 @@ class TaskService:
         return task
     
     @classmethod
-    def list_tasks(cls, db: Session, user: User, user_id: int) -> Page[Task]:
-        validate_user_access(user, user_id)
-        
-        return paginate(db.query(Task).filter(Task.user_id==user_id))
+    def list_tasks(cls, db: Session, user: User) -> Page[Task]:
+        return paginate(db.query(Task).filter(Task.user_id==user.id))
+    
+    @classmethod
+    def get_task(cls, db: Session, user: User, id: int):
+        task = cls._get_task_by_id(db, id)
+        validate_user_access(user, task.user_id)
+
+        return task
     
     @classmethod
     def create_task(cls, db: Session, user: User, data: TaskCreate):

@@ -1,4 +1,5 @@
 from fastapi.testclient import TestClient
+from fastapi import UploadFile
 
 from tests.fixtures.auth import *
 from tests.fixtures.generals import *
@@ -6,115 +7,133 @@ from app.core.models import Role
 
 
 class TestUserGet:
-    def test_list_users_success(self, client: TestClient, token_header):
+    def test_get_user_success(self, client: TestClient, token_header):
         header = token_header('admin')
-        response = client.get('/users/admin/', headers=header)
+        response = client.get('/users/1/', headers=header)
         
         assert response.status_code == 200
-        assert response.json().get('items') == []
+        assert response.json().get('username') == 'admin'
+        
+    def test_get_user_fail_no_auth(self, client: TestClient, token_header, create_user):
+        response = client.get('/users/1/')
+        
+        assert response.status_code == 401
+        assert response.json().get('detail') == 'Not authenticated'
+        
+    def test_list_users_success(self, client: TestClient, token_header):
+        header = token_header('admin')
+        response = client.get('/users/', headers=header)
+        
+        assert response.status_code == 200
+        assert len(response.json().get('items')) == 1
 
     def test_list_users_fail_no_auth(self, client: TestClient):
-        response = client.get('/users/admin/')
+        response = client.get('/users/')
 
         assert response.status_code == 401
         assert response.json().get('detail') == 'Not authenticated'
-
-    def test_get_user_success(self, client: TestClient, token_header, create_user):
+        
+    def test_get_user_me_success(self, client: TestClient, token_header, create_user):
         user: User = create_user()
-        # 該使用者的權限
         header = token_header(user.username)
-        response = client.get(f'/users/{user.id}/', headers=header)
         
-        assert response.status_code == 200
-        assert response.json().get('username') == user.username
-    
-    def test_get_user_success_within_admin_auth(self, client: TestClient, token_header, create_user):
-        user: User = create_user()
-        # 管理員的權限
-        header = token_header('admin')
-        response = client.get(f'/users/{user.id}/', headers=header)
+        response = client.get('/users/me/', headers=header)
         
         assert response.status_code == 200
         assert response.json().get('username') == user.username
         
-    def test_get_user_fail_user_not_access(self, client: TestClient, token_header, create_user):
-        user_1: User = create_user()
-        user_2: User = create_user()
+    def test_get_user_me_fail_no_auth(self, client: TestClient):
+        response = client.get('/users/me/')
         
-        header = token_header(user_1.username)
-        response = client.get(f'/users/{user_2.id}/', headers=header)
-        
-        assert response.status_code == 403
-        assert response.json().get('detail') == 'Forbidden'
-
+        assert response.status_code == 401
+        assert response.json().get('detail') == 'Not authenticated'
 
 class TestUserPost:
-    def test_post_user_success(self, client: TestClient):
-        data = create_user_data(Role.USER)
-        response = client.post('/users/', json=data)
-
+    def test_post_user_success(self, client: TestClient, token_header):
+        header = token_header('admin')
+        data = create_user_data(Role.SUPERUSER)
+        
+        response = client.post('/users/', json=data, headers=header)
+        
         assert response.status_code == 201
         assert response.json().get('username') == data.get('username')
-        assert response.json().get('role').get('id') == Role.USER
         
-    def test_post_user_fail_repeat_username(self, client: TestClient):
-        data = create_user_data(Role.USER)
+    def test_post_user_fail_repeat_username(self, client: TestClient, token_header):
+        header = token_header('admin')
+        data = create_user_data(Role.SUPERUSER)
         data['username'] = 'admin'
-        response = client.post('/users/', json=data)
+        response = client.post('/users/', json=data, headers=header)
         
         assert response.status_code == 400
         assert response.json().get('detail') == '該帳號名稱已存在'
         
-    def test_post_user_admin_success(self, client: TestClient, token_header):
+    def test_register_user_success(self, client: TestClient):
         data = create_user_data(Role.SUPERUSER)
-        header = token_header('admin')
-        response = client.post('/users/admin/', json=data, headers=header)
+        
+        response = client.post('/users/register/', json=data)
         
         assert response.status_code == 201
         assert response.json().get('username') == data.get('username')
-        assert response.json().get('role').get('id') == Role.SUPERUSER
+        assert response.json().get('role').get('id') == 3
         
-    def test_post_user_admin_fail_no_auth(self, client: TestClient):
-        data = create_user_data(Role.SUPERUSER)
-        response = client.post('/users/admin/', json=data)
+    def test_upload_headshot_success(self, client: TestClient, token_header, create_user):
+        user: User = create_user()
+        header = token_header(user.username)
         
-        assert response.status_code == 401
-        assert response.json().get('detail') == 'Not authenticated'
+        with open('tests/files/headshot.png', 'rb') as f:
+            data = {
+                'file': ('test.png', f, 'image/png')
+            }
+        
+            response = client.post('/users/headshot/me/', headers=header, files=data)
+        
+        assert response.status_code == 200
 
 
 class TestUserPut:
     def test_put_user_success(self, client: TestClient, token_header, create_user):
+        header = token_header('admin')
         user: User = create_user()
         data = user.model_dump()
         data.update(username='update_user')
-        header = token_header(user.username)
         response = client.put(f'/users/{user.id}/', json=data, headers=header)
         
         assert response.status_code == 200
         assert response.json().get('username') == 'update_user'
         
     def test_put_user_fail_repeat_username(self, client: TestClient, token_header, create_user):
+        header = token_header('admin')
         user: User = create_user()
         data = user.model_dump()
         data.update(username='admin')
-        header = token_header(user.username)
         response = client.put(f'/users/{user.id}/', json=data, headers=header)
         
         assert response.status_code == 400
         assert response.json().get('detail') == '該帳號名稱已存在'
         
-    def test_delete_user_fail_not_found(self, client: TestClient, token_header):
+    def test_put_user_fail_not_found(self, client: TestClient, token_header):
         header = token_header('admin')
         data = create_user_data()
         response = client.put('/users/5/', json=data, headers=header)
         
         assert response.status_code == 404
+        
+    def test_put_user_me_success(self, client: TestClient, token_header, create_user):
+        user: User = create_user()
+        header = token_header(user.username)
+        data = create_user_data()
+        data.update(username='update_user')
+        response = client.put('/users/me/', json=data, headers=header)
+        
+        assert response.status_code == 200
+        assert response.json().get('username') == 'update_user'
 
 
 class TestUserDelete:
     def test_delete_user_success(self, client: TestClient, token_header, create_user):
+        header = token_header('admin')
         user: User = create_user()
-        header = token_header(user.username)
+        
         response = client.delete(f'/users/{user.id}/', headers=header)
         
         assert response.status_code == 204

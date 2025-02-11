@@ -16,9 +16,20 @@ router = APIRouter()
 def list_tasks(
     db: SessionDEP,
     user: UserDEP,
-    user_id: int = Query(description='使用者的 ID')
     ):
-    return TaskService.list_tasks(db, user, user_id)
+    return TaskService.list_tasks(db, user)
+
+@router.get(
+    '/{id:int}/',
+    response_model=TaskResponse,
+    summary='獲取單一任務'
+)
+def get_task(
+    db: SessionDEP,
+    user: UserDEP,
+    id: int,
+    ):
+    return TaskService.get_task(db, user, id)
 
 @router.post(
     '/',

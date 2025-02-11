@@ -28,10 +28,13 @@ class TagService:
         return tag
     
     @classmethod
-    def list_tags(cls, db: Session, user: User) -> Page[Tag]:
+    def list_tags(cls, db: Session, user: User, is_public) -> Page[Tag]:
         public_tags = db.query(Tag).filter(Tag.is_public == True)
         user_tags = db.query(Tag).join(User.tags).filter(User.id == user.id)
-        tags = public_tags.union(user_tags).order_by(Tag.id)
+        if is_public:
+            tags = public_tags.union(user_tags).order_by(Tag.id)
+        else:
+            tags = user_tags
         
         return paginate(tags)
     

@@ -4,24 +4,27 @@ from tests.fixtures.auth import *
 from tests.fixtures.generals import *
 
 class TestTagGet:
-    def test_list_tags_success_admin(self, client: TestClient, token_header):
-        header = token_header()
-        
-        response = client.get('/tags/', headers=header)
-        
-        assert response.status_code == 200
-        assert len(response.json().get('items')) == 3
-        
-    def test_list_tags_success_user(self, client: TestClient, token_header, create_user, create_tag):
+    def test_list_tags_success_is_public_true(self, client: TestClient, token_header, create_user, create_tag):
         user: User = create_user()
         create_tag(user.id, False)
         
         header = token_header(user.username)
         
-        response = client.get('/tags/', headers=header)
+        response = client.get('/tags/?is_public=true', headers=header)
         
         assert response.status_code == 200
-        assert any(item['is_public'] is False for item in response.json().get('items')) 
+        assert len(response.json().get('items')) == 4
+        
+    def test_list_tags_success_is_public_false(self, client: TestClient, token_header, create_user, create_tag):
+        user: User = create_user()
+        create_tag(user.id, False)
+        
+        header = token_header(user.username)
+        
+        response = client.get('/tags/?is_public=false', headers=header)
+        
+        assert response.status_code == 200
+        assert len(response.json().get('items')) == 1
     
     def test_list_tags_fail_no_auth(self, client: TestClient):
         response = client.get('/tags/')

@@ -27,7 +27,7 @@ class User(UserBase, table=True):
     __tablename__ = 'users'
     
     id : int = Field(primary_key=True, index=True)
-    role_id: int = Field(foreign_key='user_roles.id')
+    role_id: int = Field(foreign_key='user_roles.id', default=Role.USER)
     
     password: str
     
@@ -36,6 +36,8 @@ class User(UserBase, table=True):
     role: 'UserRole' = Relationship(back_populates='users')
     tasks: list['Task'] = Relationship(back_populates='user')
     tags: list['Tag'] = Relationship(back_populates='owner')
+    
+    headshot_filepath: str = Field(nullable=True, default=None)
     
     def encode_password(self):        
         self.password = pwd_context.hash(self.password)

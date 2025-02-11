@@ -8,7 +8,7 @@ def login(client: TestClient, username, password):
         'password': password
     }
     
-    res = client.post('/auth/login/', data=data)
+    res = client.post('/auth/token/', data=data)
 
     assert res.status_code == 200, 'Admin login failed'
     

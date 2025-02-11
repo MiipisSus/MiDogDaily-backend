@@ -11,10 +11,6 @@ def update_instance(obj, data: SQLModel):
     for field, value in data.model_dump().items():
         if hasattr(obj, field):
             setattr(obj, field, value)
-    
-    # User 密碼重新加密
-    if isinstance(obj, User):
-        obj.encode_password()
             
 def validate_user_access(user: User, user_id):
     """

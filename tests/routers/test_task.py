@@ -5,43 +5,44 @@ from tests.fixtures.generals import *
 
 
 class TestTaskGet:
-    def test_list_tasks_success_admin(self, client: TestClient, token_header, create_task):
-        task: Task = create_task(1)
-        
-        header = token_header()
-        
-        response = client.get('/tasks/?user_id=1', headers=header)
-
-        assert response.status_code == 200
-        assert response.json().get('items')[0].get('id') == task.id
-        
-    def test_list_tasks_success_user(self, client: TestClient, token_header, create_user, create_task):
+    def test_get_task_success_user(self, client: TestClient, token_header, create_user, create_task):
         user: User = create_user()
         task: Task = create_task(user.id)
         
         header = token_header(user.username)
         
-        response = client.get(f'/tasks/?user_id={user.id}', headers=header)
+        response = client.get(f'/tasks/{task.id}/', headers=header)
         
         assert response.status_code == 200
-        assert response.json().get('items')[0].get('id') == task.id
+        assert response.json().get('id') == task.id
     
-    def test_list_tasks_fail_forbidden(self, client: TestClient, token_header, create_user, create_task):
+    def test_get_task_fail_forbidden(self, client: TestClient, token_header, create_user, create_task):
         user_1: User = create_user()
         task: Task = create_task(user_1.id)
         user_2: User = create_user()
         
         header = token_header(user_2.username)
         
-        response = client.get(f'/tasks/?user_id={user_1.id}', headers=header)
+        response = client.get(f'/tasks/{task.id}/', headers=header)
         
         assert response.status_code == 403
     
-    def test_list_tasks_fail_no_auth(self, client: TestClient):
-        response = client.get('/tasks/?user_id=1')
+    def test_get_task_fail_no_auth(self, client: TestClient):
+        response = client.get(f'/tasks/1/')
         
         assert response.status_code == 401
         assert response.json().get('detail') == 'Not authenticated'
+        
+    def test_list_tasks_success(self, client: TestClient, token_header, create_user, create_task):
+        user: User = create_user()
+        create_task(user.id)
+        create_task(user.id)
+        header = token_header(user.username)
+        
+        response = client.get('/tasks/', headers=header)
+        
+        assert response.status_code == 200
+        assert len(response.json().get('items')) == 2
         
 
 class TestTaskPost:

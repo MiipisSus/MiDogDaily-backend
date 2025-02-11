@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     ALGORITHM: str
     ACCESS_TOKEN_EXPIRE_MINUTES: float
     
+    MEDIA_PATH : str
+    HEADSHOT_PATH : str
+    
     @model_validator(mode="before")
     @classmethod
     def assemble_cors_origins(cls, values: dict) -> dict:
@@ -25,6 +28,15 @@ class Settings(BaseSettings):
             raise ValueError(f"Invalid CORS origins format: {cors_origins}")
         return values
     
+    @model_validator(mode="before")
+    @classmethod
+    def assemble_static_root(cls, values: dict) -> dict:
+        # media
+        media_path = values.get("MEDIA_PATH")
+        values["HEADSHOT_PATH"] = media_path + values.get("HEADSHOT_PATH")
+        
+        return values
+            
     model_config = ConfigDict(
         case_sensitive=True,
         env_file=".env",
