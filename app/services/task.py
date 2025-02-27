@@ -2,8 +2,10 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from fastapi_pagination import Page
 from fastapi_pagination.ext.sqlalchemy import paginate
+from datetime import datetime, timedelta
 
 from app.core.models import Task, User, TaskTagLink
+from app.core.filters import TaskRangeParams
 from app.core.schemas import TaskCreate
 from .tag import TagService
 from .utils import update_instance, validate_user_access
@@ -29,8 +31,37 @@ class TaskService:
         return task
     
     @classmethod
-    def list_tasks(cls, db: Session, user: User) -> Page[Task]:
-        return paginate(db.query(Task).filter(Task.user_id==user.id))
+    def list_tasks(cls, db: Session, user: User, query) -> Page[Task]:
+        today = datetime.today().date()
+        tasks = db.query(Task).filter(Task.user_id == user.id)
+        
+        if query.get("date"):
+            date = query.get("date")
+            start_of_day = datetime.combine(date, datetime.min.time())
+            end_of_day = datetime.combine(date, datetime.max.time())
+            tasks = tasks.filter(Task.deadline.between(start_of_day, end_of_day))
+        elif query.get('range'):
+            range = query.get('range')
+            if range == TaskRangeParams.today:
+                start_of_day = datetime.combine(today, datetime.min.time())
+                end_of_day = datetime.combine(today, datetime.max.time())
+
+                tasks = tasks.filter(Task.deadline.between(start_of_day, end_of_day))
+            elif range == TaskRangeParams.week:
+                start_of_week = today - timedelta(days=today.weekday())
+                end_of_week = start_of_week + timedelta(days=6)
+                tasks = tasks.filter(Task.deadline.between(start_of_week, end_of_week))
+            elif range == TaskRangeParams.month:
+                start_of_month = today.replace(day=1)
+                next_month = start_of_month.replace(month=start_of_month.month % 12 + 1, day=1)
+                end_of_month = next_month - timedelta(days=1)
+                tasks = tasks.filter(Task.deadline.between(start_of_month, end_of_month))
+
+        tasks = tasks.filter(Task.is_completed == query.get('is_completed'))
+        # order
+        tasks = tasks.order_by(Task.deadline)
+        
+        return paginate(tasks)
     
     @classmethod
     def get_task(cls, db: Session, user: User, id: int):
@@ -96,10 +127,10 @@ class TaskService:
             db.add(task_tag)
         
         update_instance(task, data)
-        
+            
         db.commit()
         db.refresh(task)
-        
+            
         return task
     
     @classmethod

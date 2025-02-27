@@ -145,3 +145,4 @@ frontend/
 
 # alembic
 alembic/versions/
+node_modules

@@ -41,7 +41,7 @@ class Task(TaskBase, table=True):
     user_id: int = Field(foreign_key='users.id', ondelete='CASCADE')
     
     create_at: datetime = Field(default_factory=datetime.now, nullable=False)
-    is_done: bool = Field(default=False, nullable=False)
+    is_completed: bool = Field(default=False, nullable=False)
     
     user: 'User' = Relationship(back_populates='tasks')
     tags: list['Tag'] = Relationship(back_populates='tasks', link_model=TaskTagLink)

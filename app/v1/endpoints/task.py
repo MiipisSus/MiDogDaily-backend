@@ -1,13 +1,18 @@
 from fastapi import APIRouter, status, Query
 from fastapi_pagination import Page
 from typing import Optional
+from enum import Enum
+from datetime import date
 
 from app.core.schemas import TaskCreate, TaskResponse
+from app.core.filters import TaskRangeParams
 from app.services import TaskService
 from app.deps import SessionDEP, UserDEP
 
 router = APIRouter()
 
+
+    
 @router.get(
     '/',
     response_model=Page[TaskResponse],
@@ -16,8 +21,16 @@ router = APIRouter()
 def list_tasks(
     db: SessionDEP,
     user: UserDEP,
+    range: Optional[TaskRangeParams] = Query(default=None, description='快速選擇日期範圍'),
+    date: Optional[date] = Query(default=None, description='指定日期（若 range 有值，則略過）'),
+    is_completed: Optional[bool] = Query(default=False, description='是否獲取已完成任務'),
     ):
-    return TaskService.list_tasks(db, user)
+    query = {
+        'range': range,
+        'date': date,
+        'is_completed': is_completed
+    }
+    return TaskService.list_tasks(db, user, query)
 
 @router.get(
     '/{id:int}/',
@@ -55,4 +68,3 @@ def update_task(db: SessionDEP, user: UserDEP, id: int, data: TaskCreate):
     )
 def delete_task(db: SessionDEP, user: UserDEP, id: int):
     return TaskService.delete_task(db, user, id)
-

@@ -155,7 +155,7 @@ class UserService:
         file_ext = file.filename.split('.')[-1]
         filename = f"{uuid4()}.{file_ext}"
         
-        upload_dir = os.path.join(HEADSHOT_PATH, f'{id}/')
+        upload_dir = os.path.join(HEADSHOT_PATH, f'{user.id}/')
         os.makedirs(upload_dir, exist_ok=True)
         
         file_path = os.path.join(upload_dir, filename)
