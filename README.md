@@ -6,9 +6,14 @@ This project was generated via [manage-fastapi](https://ycd.github.io/manage-fas
 
 This project is licensed under the terms of the None license.
 
+## Before you run this server...
+1. Set up the .env file
+2. Create a venv, then install all requirements
+3. Do the migration, then run init_db.py
+
 ## Run Server
 
-uvicorn app.main:app --reload
+uvicorn app.main:app --reload, or use start.sh
 
 ## Migration
 
