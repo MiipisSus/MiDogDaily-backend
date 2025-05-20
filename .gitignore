@@ -144,5 +144,4 @@ cython_debug/
 frontend/
 
 # alembic
-alembic/versions/
 node_modules
