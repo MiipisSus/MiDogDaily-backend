@@ -145,3 +145,6 @@ frontend/
 
 # alembic
 node_modules
+
+*.db
+static/*
